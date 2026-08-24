@@ -310,10 +310,6 @@ document.querySelectorAll(".beginner-lang-tabs .lang-tab").forEach((tab) => {
     document.querySelectorAll(".beginner-lang-tabs .lang-tab").forEach((t) => t.classList.remove("active"));
     tab.classList.add("active");
     activeBeginnerLang = tab.dataset.lang;
-    const hint = document.getElementById("hinglish-tab-hint");
-    if (hint) {
-      hint.classList.toggle("hidden", activeBeginnerLang !== "hinglish");
-    }
     if (currentBeginnerGuide) {
       renderBeginnerGuide(currentBeginnerGuide, activeBeginnerLang);
     }
@@ -360,23 +356,23 @@ function renderBeginnerGuide(guide, lang = "english") {
 
   const signal = content.signal_explained || {};
   document.getElementById("beginner-signal-explained").innerHTML = `
-    <p><strong>Current signal: ${(signal.signal || "").replace(/_/g, " ")}</strong></p>
-    <p>${signal.what_it_means || ""}</p>
-    <p class="muted">${signal.buy_sell_hold_plain || ""}</p>
-    <p>${signal.confidence_explained || ""}</p>
-    <p>${signal.raw_vs_final || ""}</p>
-    <p><em>${signal.for_this_symbol || ""}</em></p>`;
+    <p><strong>${(signal.signal || "").replace(/_/g, " ")}</strong> — ${signal.what_it_means || ""}</p>
+    ${signal.for_this_symbol ? `<p>${signal.for_this_symbol}</p>` : ""}`;
 
   document.getElementById("beginner-analysis-plain").textContent =
     content.analysis_in_plain_terms || "";
 
   const levels = content.key_levels_explained || {};
-  document.getElementById("beginner-key-levels").innerHTML = `
-    <p><strong>Entry zone:</strong> ${levels.entry_zone || ""}</p>
-    <p><strong>Stop-loss:</strong> ${levels.stop_loss || ""}</p>
-    <p><strong>Targets:</strong> ${levels.targets || ""}</p>
-    <p><strong>Support & resistance:</strong> ${levels.support_resistance || ""}</p>
-    <p><strong>Risk/reward:</strong> ${levels.risk_reward || ""}</p>`;
+  document.getElementById("beginner-key-levels").innerHTML = [
+    levels.entry_zone,
+    levels.stop_loss,
+    levels.targets,
+    levels.support_resistance,
+    levels.risk_reward,
+  ]
+    .filter(Boolean)
+    .map((line) => `<p>${line}</p>`)
+    .join("");
 
   document.getElementById("beginner-risks").innerHTML = (content.risks_plain || [])
     .map((risk) => `<li>${risk}</li>`)

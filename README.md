@@ -2,6 +2,8 @@
 
 Worldwide-ready market analysis for **India (NSE/BSE)**, **US stocks/ETFs**, and **global indices** — with buy/sell signals, trade plans, market insight thesis, and multi-provider data.
 
+📖 **[How it works — full architecture & diagrams](HOW_IT_WORKS.md)**
+
 ## What makes this different from generic apps
 
 | Generic apps | Market Analyzer |
