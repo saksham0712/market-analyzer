@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Market Analyzer By Saksham</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <div class="header-inner">
+        <div class="brand">
+          <span class="brand-icon">📊</span>
+          <div>
+            <h1>Market Analyzer By Saksham</h1>
+            <p class="subtitle">India · US · Global Markets</p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="card search-card">
+        <form id="analyze-form" class="search-form">
+          <div class="field">
+            <label for="market-type">Market Type</label>
+            <select id="market-type" name="market_type" required>
+              <optgroup label="India">
+                <option value="index">Index (Nifty, Bank Nifty, Sensex)</option>
+                <option value="nse_stock" selected>NSE Stock</option>
+                <option value="bse_stock">BSE Stock</option>
+                <option value="etf">ETF (India)</option>
+              </optgroup>
+              <optgroup label="United States">
+                <option value="us_stock">US Stock</option>
+                <option value="us_etf">US ETF</option>
+                <option value="us_index">US Index (S&P 500, NASDAQ)</option>
+              </optgroup>
+              <optgroup label="Global">
+                <option value="global_index">Global Index</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="field field-grow symbol-field">
+            <label for="symbol">Symbol or name</label>
+            <input
+              id="symbol"
+              name="symbol"
+              type="text"
+              placeholder="e.g. UTI Gold ETF, TATAGOLD, AAPL, ^GSPC"
+              autocomplete="off"
+              required
+            />
+            <ul id="suggestions" class="suggestions hidden" role="listbox"></ul>
+          </div>
+          <button type="submit" id="analyze-btn" class="btn-primary">
+            <span class="btn-label">Analyze</span>
+            <span class="btn-spinner hidden" aria-hidden="true"></span>
+          </button>
+        </form>
+        <p id="form-hint" class="hint">Type a ticker or full name — suggestions appear as you type.</p>
+      </section>
+
+      <div id="error-banner" class="error-banner hidden" role="alert">
+        <p id="error-message"></p>
+        <div id="error-suggestions" class="error-suggestions hidden"></div>
+      </div>
+
+      <div id="results" class="results hidden">
+        <section class="card hero-card">
+          <div class="hero-top">
+            <div>
+              <h2 id="display-name">—</h2>
+              <p id="symbol-meta" class="meta">—</p>
+            </div>
+            <div class="price-block">
+              <div id="price" class="price">—</div>
+              <div id="day-change" class="day-change">—</div>
+            </div>
+          </div>
+        </section>
+
+        <div class="grid-2">
+          <section class="card signal-card">
+            <h3>Signal</h3>
+            <div id="signal-badge" class="signal-badge">—</div>
+            <div class="signal-meta">
+              <div><span class="label">Confidence</span><span id="confidence">—</span></div>
+              <div><span class="label">Score</span><span id="score">—</span></div>
+              <div><span class="label">Raw Signal</span><span id="raw-signal">—</span></div>
+              <div><span class="label">Conviction</span><span id="conviction">—</span></div>
+            </div>
+            <p id="summary" class="summary-text">—</p>
+          </section>
+
+          <section class="card action-card">
+            <h3>Action Advice</h3>
+            <p id="action-advice" class="action-text">—</p>
+          </section>
+        </div>
+
+        <section class="card beginner-guide-card" id="beginner-guide-section">
+          <button type="button" class="beginner-guide-toggle" id="beginner-guide-toggle" aria-expanded="true">
+            <span class="beginner-guide-icon">📘</span>
+            <span class="beginner-guide-title">Beginner Guide — plain-language explanation</span>
+            <span class="toggle-chevron" id="beginner-chevron">▼</span>
+          </button>
+            <div class="lang-tabs beginner-lang-tabs" role="tablist">
+            <button type="button" class="lang-tab active" data-lang="english">English</button>
+            <button type="button" class="lang-tab" data-lang="hinglish">Hinglish (सरल भाषा)</button>
+          </div>
+          <p class="lang-tab-hint muted hidden" id="hinglish-tab-hint">
+            Same analysis — Hindi + English mix mein, beginners ke liye easy words.
+          </p>
+          <div class="beginner-guide-body" id="beginner-guide-body">
+            <p class="beginner-disclaimer" id="beginner-disclaimer"></p>
+
+            <div class="beginner-verdict" id="beginner-verdict">
+              <h4 id="beginner-verdict-headline"></h4>
+              <p id="beginner-verdict-summary"></p>
+            </div>
+
+            <div class="beginner-grid-2">
+              <div class="beginner-block">
+                <h4>Why this could work</h4>
+                <ul id="beginner-why-yes" class="beginner-list positive"></ul>
+              </div>
+              <div class="beginner-block">
+                <h4>Why to be careful</h4>
+                <ul id="beginner-why-no" class="beginner-list negative"></ul>
+              </div>
+            </div>
+
+            <div class="beginner-block">
+              <h4>Before you buy — checklist</h4>
+              <div id="beginner-checklist" class="checklist"></div>
+            </div>
+
+            <div class="beginner-block">
+              <h4>What does the signal mean?</h4>
+              <div id="beginner-signal-explained" class="signal-explained"></div>
+            </div>
+
+            <div class="beginner-block">
+              <h4>Analysis in simple terms</h4>
+              <p id="beginner-analysis-plain" class="beginner-text"></p>
+            </div>
+
+            <div class="beginner-block">
+              <h4>Key price levels explained</h4>
+              <div id="beginner-key-levels" class="key-levels"></div>
+            </div>
+
+            <div class="beginner-grid-2">
+              <div class="beginner-block">
+                <h4>Risks you should know</h4>
+                <ul id="beginner-risks" class="beginner-list risks"></ul>
+              </div>
+              <div class="beginner-block">
+                <h4>What to do next</h4>
+                <ol id="beginner-next-steps" class="next-steps"></ol>
+              </div>
+            </div>
+
+            <details class="glossary-details">
+              <summary>Key terms explained (RSI, MACD, stop-loss, etc.)</summary>
+              <div id="beginner-glossary" class="glossary"></div>
+            </details>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3>Trade Plan</h3>
+          <div class="trade-plan-grid" id="trade-plan">
+            <!-- filled by JS -->
+          </div>
+        </section>
+
+        <section class="card">
+          <h3>Market Insight</h3>
+          <div id="market-insight" class="insight-panel">
+            <p id="insight-thesis" class="insight-thesis">—</p>
+            <div class="insight-grid" id="insight-grid"></div>
+            <p id="insight-providers" class="insight-providers">—</p>
+            <div id="insight-fundamentals" class="insight-fundamentals"></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3>Market Strategies</h3>
+          <div id="strategies" class="strategies-list"></div>
+        </section>
+
+        <div class="grid-2">
+          <section class="card">
+            <h3>Key Metrics</h3>
+            <table class="data-table" id="metrics-table">
+              <tbody></tbody>
+            </table>
+          </section>
+
+          <section class="card">
+            <h3>Risk Flags</h3>
+            <ul id="risks-list" class="risks-list"></ul>
+          </section>
+        </div>
+
+        <section class="card">
+          <h3>Signal Breakdown</h3>
+          <div class="table-wrap">
+            <table class="data-table" id="breakdown-table">
+              <thead>
+                <tr>
+                  <th>Factor</th>
+                  <th>Score</th>
+                  <th>Weight</th>
+                  <th>Note</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3>Recent Sessions</h3>
+          <div class="table-wrap">
+            <table class="data-table" id="sessions-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Open</th>
+                  <th>High</th>
+                  <th>Low</th>
+                  <th>Close</th>
+                  <th>Volume</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <p>Educational analysis only. Not investment advice. Validate with your own research and risk plan.</p>
+    </footer>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

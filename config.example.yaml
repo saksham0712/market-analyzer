@@ -1,0 +1,30 @@
+# Market analyzer configuration
+
+defaults:
+  history_range: 6mo
+  interval: 1d
+
+signals:
+  rsi_oversold: 30
+  rsi_overbought: 70
+  volume_spike_multiplier: 1.5
+  min_confidence: 50
+
+watchlist:
+  indices:
+    - symbol: NIFTY
+      yahoo: "^NSEI"
+      name: Nifty 50
+    - symbol: BANKNIFTY
+      yahoo: "^NSEBANK"
+      name: Nifty Bank
+  stocks:
+    - symbol: RELIANCE
+      exchange: NSE
+    - symbol: TCS
+      exchange: NSE
+  etfs:
+    - symbol: TATAGOLD
+      exchange: NSE
+    - symbol: GOLDBEES
+      exchange: NSE
