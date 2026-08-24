@@ -181,7 +181,46 @@ function range(low, high, currency) {
   return `${currency} ${fmt(low)} – ${fmt(high)}`;
 }
 
+function computeBuySellSplit(data) {
+  const base = {
+    STRONG_BUY: 88,
+    BUY: 72,
+    HOLD: 50,
+    SELL: 28,
+    STRONG_SELL: 12,
+  };
+  let buy = base[data.signal] ?? 50;
+
+  if (typeof data.score === "number") {
+    buy += data.score * 1.8;
+  }
+  if (data.confidence != null && data.signal !== "HOLD") {
+    const tilt = ((data.confidence - 50) / 50) * 8;
+    if (data.signal.includes("BUY")) buy += tilt;
+    if (data.signal.includes("SELL")) buy -= tilt;
+  }
+
+  buy = Math.round(Math.max(6, Math.min(94, buy)));
+  return { buy, sell: 100 - buy };
+}
+
+function renderSignalMeter(data) {
+  const { buy, sell } = computeBuySellSplit(data);
+  const sellEl = document.getElementById("signal-meter-sell");
+  const buyEl = document.getElementById("signal-meter-buy");
+  const trackEl = document.getElementById("signal-meter-track");
+  const labelEl = document.getElementById("signal-meter-label");
+
+  sellEl.style.width = `${sell}%`;
+  buyEl.style.width = `${buy}%`;
+  trackEl.setAttribute("aria-valuenow", String(buy));
+  labelEl.textContent = data.signal.replace(/_/g, " ");
+  labelEl.className = `signal-meter-label signal-${data.signal}`;
+}
+
 function renderResults(data) {
+  renderSignalMeter(data);
+
   const sym = data.symbol;
   document.getElementById("display-name").textContent = sym.name;
   document.getElementById("symbol-meta").textContent =

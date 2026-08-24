@@ -69,6 +69,25 @@
 
       <div id="results" class="results hidden">
         <section class="card hero-card">
+          <div class="signal-meter-wrap" id="signal-meter-wrap">
+            <div class="signal-meter-header">
+              <span class="signal-meter-end sell">Sell</span>
+              <span id="signal-meter-label" class="signal-meter-label">—</span>
+              <span class="signal-meter-end buy">Buy</span>
+            </div>
+            <div
+              class="signal-meter-track"
+              id="signal-meter-track"
+              role="meter"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="50"
+              aria-label="Buy vs sell sentiment"
+            >
+              <div class="signal-meter-sell" id="signal-meter-sell"></div>
+              <div class="signal-meter-buy" id="signal-meter-buy"></div>
+            </div>
+          </div>
           <div class="hero-top">
             <div>
               <h2 id="display-name">—</h2>
