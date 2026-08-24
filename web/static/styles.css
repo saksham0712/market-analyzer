@@ -18,6 +18,11 @@
   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 *,
 *::before,
 *::after {
@@ -30,6 +35,7 @@ body {
   color: var(--text);
   line-height: 1.5;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 .page {
@@ -64,6 +70,8 @@ body {
   font-size: 1.35rem;
   font-weight: 700;
   letter-spacing: -0.02em;
+  line-height: 1.25;
+  word-break: break-word;
 }
 
 .subtitle {
@@ -182,6 +190,10 @@ body {
 .hint {
   margin: 0.75rem 0 0;
   font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.muted {
   color: var(--text-muted);
 }
 
@@ -910,4 +922,312 @@ body {
   margin: 0;
   font-size: 0.85rem;
   color: var(--text-muted);
+}
+
+/* ── Mobile & small tablets ── */
+@media (max-width: 768px) {
+  .header {
+    padding: 0.85rem 1rem;
+  }
+
+  .brand {
+    gap: 0.6rem;
+  }
+
+  .brand-icon {
+    font-size: 1.4rem;
+    flex-shrink: 0;
+  }
+
+  .brand h1 {
+    font-size: 1.1rem;
+  }
+
+  .subtitle {
+    font-size: 0.75rem;
+  }
+
+  .main {
+    padding: 0.75rem;
+  }
+
+  .card {
+    padding: 0.9rem 1rem;
+    margin-bottom: 0.75rem;
+    border-radius: 10px;
+  }
+
+  .card h3 {
+    font-size: 0.72rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .search-form {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .field,
+  .field-grow {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .field input,
+  .field select {
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    font-size: 16px; /* prevents iOS zoom on focus */
+  }
+
+  .btn-primary {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0.65rem 1rem;
+    font-size: 0.95rem;
+  }
+
+  .hint {
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+  }
+
+  .hero-top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .hero-card h2 {
+    font-size: 1.15rem;
+    line-height: 1.3;
+    word-break: break-word;
+  }
+
+  .meta {
+    font-size: 0.8rem;
+  }
+
+  .price-block {
+    text-align: left;
+  }
+
+  .price {
+    font-size: 1.4rem;
+  }
+
+  .day-change {
+    font-size: 0.85rem;
+  }
+
+  .signal-badge {
+    font-size: 1rem;
+    padding: 0.45rem 0.75rem;
+    width: 100%;
+    text-align: center;
+    box-sizing: border-box;
+  }
+
+  .signal-meta {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .summary-text,
+  .action-text {
+    font-size: 0.9rem;
+  }
+
+  .trade-plan-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .trade-item {
+    padding: 0.6rem 0.5rem;
+  }
+
+  .trade-item .trade-label {
+    font-size: 0.65rem;
+  }
+
+  .trade-item .trade-value {
+    font-size: 0.88rem;
+    word-break: break-word;
+  }
+
+  .insight-thesis {
+    font-size: 0.9rem;
+    line-height: 1.55;
+  }
+
+  .insight-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .insight-item {
+    padding: 0.6rem;
+  }
+
+  .insight-value {
+    font-size: 0.9rem;
+  }
+
+  .fund-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .strategy-card {
+    padding: 0.85rem;
+  }
+
+  .strategy-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+
+  .strategy-title {
+    font-size: 0.9rem;
+  }
+
+  .strategy-desc {
+    font-size: 0.85rem;
+  }
+
+  .beginner-guide-toggle {
+    gap: 0.5rem;
+    align-items: flex-start;
+  }
+
+  .beginner-guide-icon {
+    font-size: 1.2rem;
+    margin-top: 0.1rem;
+  }
+
+  .beginner-guide-title {
+    font-size: 0.88rem;
+    line-height: 1.35;
+  }
+
+  .beginner-lang-tabs {
+    margin: 0.75rem 0 0.5rem;
+    width: 100%;
+  }
+
+  .lang-tabs {
+    width: 100%;
+  }
+
+  .lang-tab {
+    flex: 1;
+    font-size: 0.72rem;
+    padding: 0.45rem 0.35rem;
+    text-align: center;
+    line-height: 1.25;
+  }
+
+  .lang-tab-hint {
+    font-size: 0.78rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .beginner-guide-body {
+    margin-top: 0.85rem;
+  }
+
+  .beginner-disclaimer {
+    font-size: 0.78rem;
+    padding: 0.65rem 0.75rem;
+  }
+
+  .beginner-verdict {
+    padding: 0.85rem;
+  }
+
+  .beginner-verdict h4 {
+    font-size: 0.95rem;
+    line-height: 1.35;
+  }
+
+  .beginner-verdict p,
+  .beginner-text,
+  .beginner-list,
+  .signal-explained p,
+  .key-levels p,
+  .next-steps,
+  .checklist-item {
+    font-size: 0.85rem;
+  }
+
+  .checklist-item {
+    padding: 0.65rem;
+    gap: 0.5rem;
+  }
+
+  .checklist-item p {
+    font-size: 0.8rem;
+  }
+
+  .glossary {
+    grid-template-columns: 1fr;
+  }
+
+  .glossary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .data-table {
+    font-size: 0.78rem;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 0.4rem 0.45rem;
+  }
+
+  .data-table th {
+    font-size: 0.68rem;
+  }
+
+  .table-wrap {
+    margin: 0 -0.25rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .error-banner {
+    padding: 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .suggestion-chip {
+    font-size: 0.8rem;
+    padding: 0.35rem 0.65rem;
+  }
+
+  .footer {
+    padding: 1rem 0.75rem;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .brand h1 {
+    font-size: 1rem;
+  }
+
+  .signal-meta,
+  .trade-plan-grid,
+  .insight-grid,
+  .fund-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .price {
+    font-size: 1.25rem;
+  }
 }
