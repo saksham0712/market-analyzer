@@ -1,37 +1,15 @@
 from __future__ import annotations
 
-import os
-import sys
 import traceback
 from pathlib import Path
-
-ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
-from market_analyzer.analyzer import MarketAnalyzer
-from market_analyzer.chart_data import chart_range_options, fetch_chart_data
-from market_analyzer.models import TradePlan
-from market_analyzer.report import analysis_to_dict
-from market_analyzer.strategies import build_market_strategies
-from market_analyzer.symbol_catalog import search_catalog
-from market_analyzer.symbol_resolver import MARKET_TYPE_EXCHANGE, SymbolResolutionError
-
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
-_analyzer: MarketAnalyzer | None = None
-
-
-def get_analyzer() -> MarketAnalyzer:
-    global _analyzer
-    if _analyzer is None:
-        _analyzer = MarketAnalyzer()
-    return _analyzer
+_analyzer = None
 
 
 class AnalyzeRequest(BaseModel):
@@ -40,6 +18,15 @@ class AnalyzeRequest(BaseModel):
         ...,
         description="index, nse_stock, bse_stock, etf, us_stock, us_etf, us_index, global_index",
     )
+
+
+def _get_analyzer():
+    global _analyzer
+    if _analyzer is None:
+        from market_analyzer.analyzer import MarketAnalyzer
+
+        _analyzer = MarketAnalyzer()
+    return _analyzer
 
 
 def create_app() -> FastAPI:
@@ -59,7 +46,10 @@ def create_app() -> FastAPI:
     async def index() -> FileResponse:
         index_path = STATIC_DIR / "index.html"
         if not index_path.is_file():
-            raise HTTPException(status_code=500, detail="index.html not found in deployment bundle")
+            raise HTTPException(
+                status_code=500,
+                detail=f"index.html missing (static dir: {STATIC_DIR})",
+            )
         return FileResponse(index_path)
 
     @application.get("/static/{asset_path:path}")
@@ -69,8 +59,15 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=404, detail="Static asset not found")
         return FileResponse(file_path)
 
+    @application.get("/api/ping")
+    async def ping() -> dict:
+        return {"status": "pong"}
+
     @application.get("/api/health")
     async def health() -> dict:
+        from market_analyzer.chart_data import chart_range_options
+        from market_analyzer.symbol_resolver import MARKET_TYPE_EXCHANGE
+
         return {
             "status": "ok",
             "market_types": list(MARKET_TYPE_EXCHANGE.keys()),
@@ -90,6 +87,10 @@ def create_app() -> FastAPI:
         target_1: float | None = Query(None),
         target_2: float | None = Query(None),
     ) -> dict:
+        from market_analyzer.chart_data import fetch_chart_data
+        from market_analyzer.models import TradePlan
+        from market_analyzer.symbol_resolver import MARKET_TYPE_EXCHANGE, SymbolResolutionError, resolve_user_symbol
+
         normalized_type = market_type.lower().strip()
         if normalized_type not in MARKET_TYPE_EXCHANGE:
             raise HTTPException(
@@ -99,8 +100,6 @@ def create_app() -> FastAPI:
 
         exchange = MARKET_TYPE_EXCHANGE[normalized_type]
         try:
-            from market_analyzer.symbol_resolver import resolve_user_symbol
-
             symbol_info, _ = resolve_user_symbol(
                 symbol.strip(), exchange=exchange, market_type=normalized_type
             )
@@ -128,6 +127,9 @@ def create_app() -> FastAPI:
         q: str = Query(..., min_length=1),
         market_type: str | None = Query(None),
     ) -> dict:
+        from market_analyzer.symbol_catalog import search_catalog
+        from market_analyzer.symbol_resolver import MARKET_TYPE_EXCHANGE
+
         query = q.strip()
         if not query:
             return {"results": []}
@@ -139,6 +141,10 @@ def create_app() -> FastAPI:
 
     @application.post("/api/analyze")
     async def analyze(request: AnalyzeRequest) -> dict:
+        from market_analyzer.report import analysis_to_dict
+        from market_analyzer.strategies import build_market_strategies
+        from market_analyzer.symbol_resolver import MARKET_TYPE_EXCHANGE, SymbolResolutionError
+
         market_type = request.market_type.lower().strip()
         if market_type not in MARKET_TYPE_EXCHANGE:
             raise HTTPException(
@@ -152,7 +158,7 @@ def create_app() -> FastAPI:
 
         exchange = MARKET_TYPE_EXCHANGE[market_type]
         try:
-            result = get_analyzer().analyze(symbol, exchange=exchange, market_type=market_type)
+            result = _get_analyzer().analyze(symbol, exchange=exchange, market_type=market_type)
         except SymbolResolutionError as exc:
             return JSONResponse(
                 status_code=400,

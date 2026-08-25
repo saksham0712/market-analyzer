@@ -65,7 +65,7 @@ Yes — this app works on **Vercel’s free Hobby plan** (FastAPI is supported n
 
 2. Go to [vercel.com/new](https://vercel.com/new) → **Import** your GitHub repo.
 
-3. Vercel auto-detects FastAPI via `main.py`. No custom build command needed.
+3. Vercel auto-detects FastAPI via root **`app.py`** (not `web/app.py`). No custom build command needed.
 
 4. (Optional) Add environment variables in Vercel → **Settings → Environment Variables**:
    - `ALPHA_VANTAGE_API_KEY` — US stock cross-validation

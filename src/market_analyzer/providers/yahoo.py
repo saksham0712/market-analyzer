@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pandas as pd
-import yfinance as yf
 
 from ..models import SymbolInfo
 from .base import MarketData, MarketDataProvider
@@ -11,6 +10,11 @@ class YahooProvider:
     name = "yahoo"
 
     def fetch(self, symbol: SymbolInfo, history_range: str, interval: str) -> MarketData | None:
+        from ..runtime import ensure_yfinance_cache
+
+        ensure_yfinance_cache()
+        import yfinance as yf
+
         ticker = yf.Ticker(symbol.yahoo_symbol)
         frame = ticker.history(period=history_range, interval=interval)
         if frame.empty:
