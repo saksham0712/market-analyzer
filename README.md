@@ -1,4 +1,4 @@
-# Market Analyzer
+# Market Analyzer.
 
 Worldwide-ready market analysis for **India (NSE/BSE)**, **US stocks/ETFs**, and **global indices** — with buy/sell signals, trade plans, market insight thesis, and multi-provider data.
 
