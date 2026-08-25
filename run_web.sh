@@ -9,4 +9,4 @@ if [[ -d .venv ]]; then
   source .venv/bin/activate
 fi
 
-exec uvicorn web.app:app --reload --host 0.0.0.0 --port 8000
+exec uvicorn app:app --reload --host 0.0.0.0 --port 8000
