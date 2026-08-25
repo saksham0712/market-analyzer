@@ -100,3 +100,4 @@ class AnalysisResult:
     quote_agreement_pct: float | None = None
     market_insight: dict | None = None
     beginner_guide: dict | None = None
+    chart_data: dict | None = None

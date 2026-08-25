@@ -256,6 +256,23 @@
             </table>
           </div>
         </section>
+
+        <section class="card chart-card">
+          <div class="chart-card-header">
+            <h3>Price Chart</h3>
+            <div class="chart-range-tabs" id="chart-range-tabs" role="tablist" aria-label="Chart time range">
+              <button type="button" class="chart-range-tab" data-range="1d">1D</button>
+              <button type="button" class="chart-range-tab" data-range="1w">1W</button>
+              <button type="button" class="chart-range-tab" data-range="1m">1M</button>
+              <button type="button" class="chart-range-tab" data-range="3m">3M</button>
+              <button type="button" class="chart-range-tab active" data-range="6m">6M</button>
+              <button type="button" class="chart-range-tab" data-range="1y">1Y</button>
+            </div>
+          </div>
+          <p class="chart-hint" id="chart-hint">Close price with SMA 20/50 and trade-plan levels.</p>
+          <div id="price-chart" class="price-chart" aria-live="polite"></div>
+          <div id="price-chart-legend" class="price-chart-legend"></div>
+        </section>
       </div>
     </main>
 

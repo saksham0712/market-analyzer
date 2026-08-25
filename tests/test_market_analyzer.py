@@ -343,5 +343,21 @@ class BeginnerGuideTests(unittest.TestCase):
         self.assertTrue(guide["hinglish"]["verdict"]["headline"])
 
 
+class ChartDataTests(unittest.TestCase):
+    def test_chart_range_config(self) -> None:
+        from market_analyzer.chart_data import get_chart_range_config
+
+        day = get_chart_range_config("1d")
+        self.assertEqual(day.period, "1d")
+        self.assertEqual(day.interval, "15m")
+
+        week = get_chart_range_config("1w")
+        self.assertEqual(week.period, "5d")
+        self.assertEqual(week.interval, "1h")
+
+        default = get_chart_range_config("invalid")
+        self.assertEqual(default.key, "6m")
+
+
 if __name__ == "__main__":
     unittest.main()

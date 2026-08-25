@@ -25,6 +25,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from market_analyzer.analyzer import MarketAnalyzer
+from market_analyzer.chart_data import chart_range_options, fetch_chart_data
+from market_analyzer.models import TradePlan
 from market_analyzer.report import analysis_to_dict
 from market_analyzer.strategies import build_market_strategies
 from market_analyzer.symbol_catalog import search_catalog
@@ -52,7 +54,54 @@ async def index() -> FileResponse:
 
 @app.get("/api/health")
 async def health() -> dict:
-    return {"status": "ok", "market_types": list(MARKET_TYPE_EXCHANGE.keys())}
+    return {
+        "status": "ok",
+        "market_types": list(MARKET_TYPE_EXCHANGE.keys()),
+        "chart_ranges": chart_range_options(),
+    }
+
+
+@app.get("/api/chart")
+async def chart(
+    symbol: str = Query(..., min_length=1),
+    market_type: str = Query(...),
+    chart_range: str = Query("6m"),
+    entry_low: float | None = Query(None),
+    entry_high: float | None = Query(None),
+    stop_loss: float | None = Query(None),
+    target_1: float | None = Query(None),
+    target_2: float | None = Query(None),
+) -> dict:
+    normalized_type = market_type.lower().strip()
+    if normalized_type not in MARKET_TYPE_EXCHANGE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid market_type. Use one of: {', '.join(MARKET_TYPE_EXCHANGE)}",
+        )
+
+    exchange = MARKET_TYPE_EXCHANGE[normalized_type]
+    try:
+        from market_analyzer.symbol_resolver import resolve_user_symbol
+
+        symbol_info, _ = resolve_user_symbol(symbol.strip(), exchange=exchange, market_type=normalized_type)
+        trade_plan = TradePlan(
+            entry_low=entry_low,
+            entry_high=entry_high,
+            stop_loss=stop_loss,
+            target_1=target_1,
+            target_2=target_2,
+            risk_reward_ratio=None,
+        )
+        return fetch_chart_data(symbol_info, chart_range=chart_range, trade_plan=trade_plan)
+    except SymbolResolutionError as exc:
+        return JSONResponse(
+            status_code=400,
+            content={"detail": str(exc), "suggestions": exc.suggestions},
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Failed to fetch chart data: {exc}") from exc
 
 
 @app.get("/api/search")

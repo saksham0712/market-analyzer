@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .chart_data import build_chart_data
 from .beginner_guide import build_beginner_guide
 from .data_provider import DataProvider
 from .indicators import compute_indicators
@@ -29,7 +30,7 @@ class MarketAnalyzer:
     ) -> AnalysisResult:
         symbol_info, resolved_from = resolve_user_symbol(symbol, exchange=exchange, market_type=market_type)
         market_data = self.data_provider.fetch(symbol_info)
-        indicators, _, advanced = compute_indicators(market_data)
+        indicators, enriched_frame, advanced = compute_indicators(market_data)
 
         latest = market_data.frame.iloc[-1]
         price = float(latest["Close"])
@@ -55,6 +56,7 @@ class MarketAnalyzer:
             fifty_two_week_low=market_data.fifty_two_week_low,
             recent_bars=recent_bars,
         )
+        chart_data = build_chart_data(enriched_frame, trade_plan, chart_range="6m")
         action_advice = build_action_advice(
             signal=signal,
             raw_signal=raw_signal,
@@ -107,6 +109,7 @@ class MarketAnalyzer:
             data_providers=market_data.providers_used,
             quote_agreement_pct=market_data.quote_agreement_pct,
             market_insight=insight_to_dict(insight),
+            chart_data=chart_data,
         )
         result.beginner_guide = build_beginner_guide(result)
         return result

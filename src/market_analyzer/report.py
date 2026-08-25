@@ -234,6 +234,7 @@ def analysis_to_dict(result: AnalysisResult) -> dict:
         ],
         "risks": result.risks,
         "beginner_guide": result.beginner_guide,
+        "chart_data": result.chart_data,
     }
 
 

@@ -338,7 +338,206 @@ function renderResults(data) {
     )
     .join("");
 
+  renderPriceChart(data.chart_data, data.chart_data?.chart_range_label);
+  setChartContext(data);
+  setActiveChartRange(data.chart_data?.chart_range || "6m");
   renderBeginnerGuide(data.beginner_guide, activeBeginnerLang);
+}
+
+let currentChartContext = null;
+let activeChartRange = "6m";
+
+function setChartContext(data) {
+  const plan = data.trade_plan || {};
+  currentChartContext = {
+    symbol: data.symbol?.input,
+    market_type: data.market_type,
+    levels: data.chart_data?.levels || {},
+    plan,
+  };
+}
+
+function setActiveChartRange(range) {
+  activeChartRange = range;
+  document.querySelectorAll(".chart-range-tab").forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.range === range);
+  });
+}
+
+document.querySelectorAll(".chart-range-tab").forEach((tab) => {
+  tab.addEventListener("click", async () => {
+    if (!currentChartContext || tab.dataset.range === activeChartRange) return;
+    await loadChartRange(tab.dataset.range);
+  });
+});
+
+async function loadChartRange(range) {
+  if (!currentChartContext) return;
+
+  const chartEl = document.getElementById("price-chart");
+  const hintEl = document.getElementById("chart-hint");
+  setActiveChartRange(range);
+  chartEl.innerHTML = "<p class=\"chart-loading\">Loading chart…</p>";
+  if (hintEl) hintEl.textContent = "Fetching price history…";
+
+  const params = new URLSearchParams({
+    symbol: currentChartContext.symbol,
+    market_type: currentChartContext.market_type,
+    chart_range: range,
+  });
+
+  const plan = currentChartContext.plan;
+  if (plan.entry_low != null) params.set("entry_low", plan.entry_low);
+  if (plan.entry_high != null) params.set("entry_high", plan.entry_high);
+  if (plan.stop_loss != null) params.set("stop_loss", plan.stop_loss);
+  if (plan.target_1 != null) params.set("target_1", plan.target_1);
+  if (plan.target_2 != null) params.set("target_2", plan.target_2);
+
+  try {
+    const response = await fetch(`/api/chart?${params}`);
+    const chartData = await response.json();
+    if (!response.ok) {
+      throw new Error(chartData.detail || "Failed to load chart");
+    }
+    renderPriceChart(chartData, chartData.chart_range_label);
+    if (hintEl) {
+      hintEl.textContent = `Close price with SMA 20/50 · ${chartData.chart_range_label} · ${chartData.interval} bars`;
+    }
+  } catch (err) {
+    chartEl.innerHTML = `<p class="chart-empty">${err.message}</p>`;
+    if (hintEl) hintEl.textContent = "Could not load chart for this range.";
+  }
+}
+
+function fmtCompact(value) {
+  const n = Number(value);
+  if (Number.isNaN(n)) return "";
+  if (n >= 10000) return `${(n / 1000).toFixed(0)}k`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  return n < 100 ? n.toFixed(2) : n.toFixed(0);
+}
+
+function renderPriceChart(chart, rangeLabel = "6 Months") {
+  const wrap = document.getElementById("price-chart");
+  const legend = document.getElementById("price-chart-legend");
+  const hintEl = document.getElementById("chart-hint");
+
+  if (!wrap) return;
+
+  if (!chart?.series?.length) {
+    wrap.innerHTML = "<p class=\"chart-empty\">Chart data not available.</p>";
+    if (legend) legend.innerHTML = "";
+    return;
+  }
+
+  if (hintEl && rangeLabel) {
+    hintEl.textContent = `Close price with SMA 20/50 · ${rangeLabel} · ${chart.interval || "1d"} bars`;
+  }
+
+  const series = chart.series;
+  const levels = chart.levels || {};
+  const W = 800;
+  const H = 260;
+  const pad = { t: 18, r: 16, b: 36, l: 56 };
+  const plotW = W - pad.l - pad.r;
+  const plotH = H - pad.t - pad.b;
+
+  const values = [];
+  series.forEach((p) => {
+    values.push(p.close);
+    if (p.sma_20 != null) values.push(p.sma_20);
+    if (p.sma_50 != null) values.push(p.sma_50);
+  });
+  Object.values(levels).forEach((v) => values.push(v));
+
+  let ymin = Math.min(...values);
+  let ymax = Math.max(...values);
+  const padY = (ymax - ymin) * 0.08 || ymax * 0.02 || 1;
+  ymin -= padY;
+  ymax += padY;
+  const ySpan = ymax - ymin || 1;
+
+  const xAt = (i) => pad.l + (i / (series.length - 1 || 1)) * plotW;
+  const yAt = (v) => pad.t + plotH - ((v - ymin) / ySpan) * plotH;
+
+  const linePath = (key) => {
+    let started = false;
+    let d = "";
+    series.forEach((p, i) => {
+      const v = p[key];
+      if (v == null) {
+        started = false;
+        return;
+      }
+      d += `${started ? "L" : "M"}${xAt(i).toFixed(1)},${yAt(v).toFixed(1)} `;
+      started = true;
+    });
+    return d.trim();
+  };
+
+  const levelLine = (value, color, label) => {
+    if (value == null) return "";
+    const y = yAt(value);
+    return `
+      <line x1="${pad.l}" y1="${y}" x2="${W - pad.r}" y2="${y}"
+        stroke="${color}" stroke-width="1" stroke-dasharray="5,4" opacity="0.8" />
+      <text x="${W - pad.r}" y="${y - 4}" fill="${color}" font-size="10" text-anchor="end">${label}</text>`;
+  };
+
+  let entryBand = "";
+  if (levels.entry_low != null && levels.entry_high != null) {
+    const yTop = yAt(levels.entry_high);
+    const yBottom = yAt(levels.entry_low);
+    entryBand = `<rect x="${pad.l}" y="${yTop}" width="${plotW}" height="${yBottom - yTop}" fill="rgba(59,130,246,0.14)" />`;
+  }
+
+  const gridLines = [0, 0.25, 0.5, 0.75, 1]
+    .map((t) => {
+      const v = ymin + ySpan * (1 - t);
+      const y = pad.t + plotH * t;
+      return `
+        <line x1="${pad.l}" y1="${y}" x2="${W - pad.r}" y2="${y}" stroke="#2d3a4f" stroke-width="1" />
+        <text x="${pad.l - 6}" y="${y + 4}" fill="#8b9cb3" font-size="10" text-anchor="end">${fmtCompact(v)}</text>`;
+    })
+    .join("");
+
+  const xLabelIndexes = [0, Math.floor(series.length / 2), series.length - 1];
+  const formatAxisLabel = (dateStr) => {
+    if (dateStr.includes(" ")) return dateStr.split(" ")[1].slice(0, 5);
+    return dateStr.slice(5);
+  };
+  const xLabels = xLabelIndexes
+    .map(
+      (i) =>
+        `<text x="${xAt(i)}" y="${H - 8}" fill="#8b9cb3" font-size="10" text-anchor="middle">${formatAxisLabel(series[i].date)}</text>`
+    )
+    .join("");
+
+  const last = series[series.length - 1];
+
+  wrap.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" class="price-chart-svg" role="img" aria-label="Price line chart">
+      ${gridLines}
+      ${entryBand}
+      ${levelLine(levels.stop_loss, "#ef4444", "Stop")}
+      ${levelLine(levels.target_1, "#22c55e", "T1")}
+      ${levelLine(levels.target_2, "#22c55e", "T2")}
+      <path d="${linePath("sma_50")}" fill="none" stroke="#eab308" stroke-width="1.5" opacity="0.75" />
+      <path d="${linePath("sma_20")}" fill="none" stroke="#60a5fa" stroke-width="1.5" opacity="0.85" />
+      <path d="${linePath("close")}" fill="none" stroke="#e8edf4" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" />
+      ${xLabels}
+      <circle cx="${xAt(series.length - 1)}" cy="${yAt(last.close)}" r="3.5" fill="#3b82f6" />
+    </svg>`;
+
+  if (legend) {
+    legend.innerHTML = `
+      <span class="legend-item"><span class="legend-dot close"></span>Close</span>
+      <span class="legend-item"><span class="legend-dot sma20"></span>SMA 20</span>
+      <span class="legend-item"><span class="legend-dot sma50"></span>SMA 50</span>
+      ${levels.entry_low != null ? "<span class=\"legend-item\"><span class=\"legend-dot entry\"></span>Entry zone</span>" : ""}
+      ${levels.stop_loss != null ? "<span class=\"legend-item\"><span class=\"legend-dot stop\"></span>Stop-loss</span>" : ""}
+      ${levels.target_1 != null ? "<span class=\"legend-item\"><span class=\"legend-dot target\"></span>Targets</span>" : ""}`;
+  }
 }
 
 let currentBeginnerGuide = null;
