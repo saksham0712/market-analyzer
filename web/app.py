@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import traceback
 from pathlib import Path
 
@@ -10,6 +11,12 @@ from pydantic import BaseModel, Field
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 _analyzer = None
+
+
+def _user_facing_error(exc: Exception, fallback: str) -> str:
+    if os.getenv("VERCEL_ENV") == "production":
+        return fallback
+    return f"{fallback} ({type(exc).__name__}: {exc})"
 
 
 class AnalyzeRequest(BaseModel):
@@ -35,11 +42,19 @@ def create_app() -> FastAPI:
     @application.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
         if isinstance(exc, HTTPException):
-            return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+            detail = exc.detail
+            if not isinstance(detail, str):
+                detail = str(detail)
+            return JSONResponse(status_code=exc.status_code, content={"detail": detail})
         traceback.print_exc()
         return JSONResponse(
             status_code=500,
-            content={"detail": f"Internal server error: {exc}"},
+            content={
+                "detail": _user_facing_error(
+                    exc,
+                    "Something went wrong on the server. Please try again in a moment.",
+                )
+            },
         )
 
     @application.get("/")
@@ -120,7 +135,13 @@ def create_app() -> FastAPI:
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except Exception as exc:
-            raise HTTPException(status_code=502, detail=f"Failed to fetch chart data: {exc}") from exc
+            raise HTTPException(
+                status_code=502,
+                detail=_user_facing_error(
+                    exc,
+                    "Could not load chart data right now. Try a different time range or symbol.",
+                ),
+            ) from exc
 
     @application.get("/api/search")
     async def search(
@@ -170,7 +191,13 @@ def create_app() -> FastAPI:
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except Exception as exc:
-            raise HTTPException(status_code=502, detail=f"Failed to fetch market data: {exc}") from exc
+            raise HTTPException(
+                status_code=502,
+                detail=_user_facing_error(
+                    exc,
+                    "Could not fetch market data right now. Please try again in a moment.",
+                ),
+            ) from exc
 
         payload = analysis_to_dict(result)
         payload["market_type"] = market_type

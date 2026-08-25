@@ -24,6 +24,56 @@ const suggestionsEl = document.getElementById("suggestions");
 
 let searchTimer = null;
 
+async function parseApiResponse(response) {
+  const text = await response.text();
+  if (!text) {
+    return { detail: `Empty response from server (${response.status})` };
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    const snippet = text.replace(/\s+/g, " ").trim().slice(0, 180);
+    if (response.status >= 500) {
+      return {
+        detail:
+          "Server error — the app may still be starting. Wait 30 seconds and try again. " +
+          `(HTTP ${response.status})`,
+      };
+    }
+    return { detail: snippet || `Unexpected response (HTTP ${response.status})` };
+  }
+}
+
+function formatApiError(data, fallback = "Something went wrong. Please try again.") {
+  if (!data) return fallback;
+  if (typeof data.detail === "string") return data.detail;
+  if (Array.isArray(data.detail)) {
+    return data.detail
+      .map((item) => (typeof item === "string" ? item : item.msg || JSON.stringify(item)))
+      .join("; ");
+  }
+  if (data.message && typeof data.message === "string") return data.message;
+  return fallback;
+}
+
+async function apiFetch(url, options = {}) {
+  try {
+    const response = await fetch(url, options);
+    const data = await parseApiResponse(response);
+    return { response, data, ok: response.ok };
+  } catch (err) {
+    return {
+      response: null,
+      data: {
+        detail:
+          "Cannot reach the server. Check your internet connection, or wait if the app just woke up from sleep.",
+      },
+      ok: false,
+      networkError: err,
+    };
+  }
+}
+
 marketTypeSelect.addEventListener("change", () => {
   symbolInput.placeholder = MARKET_PLACEHOLDERS[marketTypeSelect.value] || "";
   hideSuggestions();
@@ -59,15 +109,15 @@ form.addEventListener("submit", async (event) => {
   const market_type = marketTypeSelect.value;
 
   try {
-    const response = await fetch("/api/analyze", {
+    const { response, data, ok } = await apiFetch("/api/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ symbol, market_type }),
     });
 
-    const data = await response.json();
-    if (!response.ok) {
-      showError(data.detail, data.suggestions);
+    if (!ok) {
+      showError(formatApiError(data, "Analysis failed"), data.suggestions);
+      resultsEl.classList.add("hidden");
       return;
     }
 
@@ -75,7 +125,7 @@ form.addEventListener("submit", async (event) => {
     resultsEl.classList.remove("hidden");
     resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (err) {
-    showError(err.message);
+    showError(err.message || "Analysis failed");
     resultsEl.classList.add("hidden");
   } finally {
     setLoading(false);
@@ -88,8 +138,11 @@ async function fetchSuggestions(query) {
       q: query,
       market_type: marketTypeSelect.value,
     });
-    const response = await fetch(`/api/search?${params}`);
-    const data = await response.json();
+    const { data, ok } = await apiFetch(`/api/search?${params}`);
+    if (!ok) {
+      hideSuggestions();
+      return;
+    }
     renderSuggestions(data.results || []);
   } catch {
     hideSuggestions();
@@ -394,10 +447,9 @@ async function loadChartRange(range) {
   if (plan.target_2 != null) params.set("target_2", plan.target_2);
 
   try {
-    const response = await fetch(`/api/chart?${params}`);
-    const chartData = await response.json();
-    if (!response.ok) {
-      throw new Error(chartData.detail || "Failed to load chart");
+    const { data: chartData, ok } = await apiFetch(`/api/chart?${params}`);
+    if (!ok) {
+      throw new Error(formatApiError(chartData, "Failed to load chart"));
     }
     renderPriceChart(chartData, chartData.chart_range_label);
     if (hintEl) {
@@ -698,3 +750,14 @@ function renderMarketInsight(data) {
         .join("")}</div>`
     : "";
 }
+
+async function checkServerOnLoad() {
+  const { ok } = await apiFetch("/api/ping", { cache: "no-store" });
+  if (!ok) {
+    showError(
+      "Server is waking up or temporarily unavailable. Wait 30 seconds, then try analyzing a symbol."
+    );
+  }
+}
+
+checkServerOnLoad();
