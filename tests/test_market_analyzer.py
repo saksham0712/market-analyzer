@@ -349,11 +349,11 @@ class ChartDataTests(unittest.TestCase):
 
         day = get_chart_range_config("1d")
         self.assertEqual(day.period, "1d")
-        self.assertEqual(day.interval, "15m")
+        self.assertEqual(day.interval, "5m")
 
         week = get_chart_range_config("1w")
         self.assertEqual(week.period, "5d")
-        self.assertEqual(week.interval, "1h")
+        self.assertEqual(week.interval, "15m")
 
         default = get_chart_range_config("invalid")
         self.assertEqual(default.key, "6m")

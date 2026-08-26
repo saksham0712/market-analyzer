@@ -391,14 +391,23 @@ function renderResults(data) {
     )
     .join("");
 
-  renderPriceChart(data.chart_data, data.chart_data?.chart_range_label);
+  renderChart(data.chart_data, data.chart_data?.chart_range_label);
   setChartContext(data);
   setActiveChartRange(data.chart_data?.chart_range || "6m");
+  activeChartInterval = data.chart_data?.interval || "1d";
+  updateIntervalTabs(
+    data.chart_data?.chart_range || "6m",
+    activeChartInterval,
+    data.chart_data?.available_intervals
+  );
   renderBeginnerGuide(data.beginner_guide, activeBeginnerLang);
 }
 
 let currentChartContext = null;
+let currentChartData = null;
 let activeChartRange = "6m";
+let activeChartInterval = "1d";
+let activeChartType = "line";
 
 function setChartContext(data) {
   const plan = data.trade_plan || {};
@@ -417,14 +426,68 @@ function setActiveChartRange(range) {
   });
 }
 
+function setActiveChartInterval(interval) {
+  activeChartInterval = interval;
+  document.querySelectorAll(".chart-interval-tab").forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.interval === interval);
+  });
+}
+
+function setActiveChartType(type) {
+  activeChartType = type;
+  document.querySelectorAll(".chart-type-tab").forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.type === type);
+  });
+}
+
+function updateIntervalTabs(chartRange, selectedInterval, availableIntervals) {
+  const container = document.getElementById("chart-interval-tabs");
+  if (!container) return;
+
+  const options = availableIntervals || [];
+  container.innerHTML = options
+    .map(
+      (opt) =>
+        `<button type="button" class="chart-interval-tab${opt.key === selectedInterval ? " active" : ""}" data-interval="${opt.key}" role="tab">${opt.label}</button>`
+    )
+    .join("");
+
+  container.querySelectorAll(".chart-interval-tab").forEach((tab) => {
+    tab.addEventListener("click", async () => {
+      if (!currentChartContext || tab.dataset.interval === activeChartInterval) return;
+      activeChartInterval = tab.dataset.interval;
+      setActiveChartInterval(activeChartInterval);
+      await loadChart(activeChartRange, activeChartInterval);
+    });
+  });
+}
+
+function updateChartHint(chart, rangeLabel) {
+  const hintEl = document.getElementById("chart-hint");
+  if (!hintEl || !chart) return;
+  const intervalLabel = chart.interval_label || chart.interval || "1d";
+  const styleLabel = activeChartType === "candle" ? "Candlesticks" : "Line + SMA 20/50";
+  hintEl.textContent = `${styleLabel} · ${rangeLabel || chart.chart_range_label} · ${intervalLabel} bars`;
+}
+
 document.querySelectorAll(".chart-range-tab").forEach((tab) => {
   tab.addEventListener("click", async () => {
     if (!currentChartContext || tab.dataset.range === activeChartRange) return;
-    await loadChartRange(tab.dataset.range);
+    await loadChart(tab.dataset.range, null);
   });
 });
 
-async function loadChartRange(range) {
+document.querySelectorAll(".chart-type-tab").forEach((tab) => {
+  tab.addEventListener("click", () => {
+    if (tab.dataset.type === activeChartType) return;
+    setActiveChartType(tab.dataset.type);
+    if (currentChartData) {
+      renderChart(currentChartData, currentChartData.chart_range_label);
+    }
+  });
+});
+
+async function loadChart(range, interval = activeChartInterval) {
   if (!currentChartContext) return;
 
   const chartEl = document.getElementById("price-chart");
@@ -438,6 +501,7 @@ async function loadChartRange(range) {
     market_type: currentChartContext.market_type,
     chart_range: range,
   });
+  if (interval) params.set("interval", interval);
 
   const plan = currentChartContext.plan;
   if (plan.entry_low != null) params.set("entry_low", plan.entry_low);
@@ -451,14 +515,23 @@ async function loadChartRange(range) {
     if (!ok) {
       throw new Error(formatApiError(chartData, "Failed to load chart"));
     }
-    renderPriceChart(chartData, chartData.chart_range_label);
-    if (hintEl) {
-      hintEl.textContent = `Close price with SMA 20/50 · ${chartData.chart_range_label} · ${chartData.interval} bars`;
-    }
+    activeChartInterval = chartData.interval || activeChartInterval;
+    updateIntervalTabs(chartData.chart_range, activeChartInterval, chartData.available_intervals);
+    renderChart(chartData, chartData.chart_range_label);
   } catch (err) {
     chartEl.innerHTML = `<p class="chart-empty">${err.message}</p>`;
     if (hintEl) hintEl.textContent = "Could not load chart for this range.";
   }
+}
+
+function renderChart(chart, rangeLabel = "6 Months") {
+  currentChartData = chart;
+  if (activeChartType === "candle") {
+    renderCandlestickChart(chart, rangeLabel);
+  } else {
+    renderLineChart(chart, rangeLabel);
+  }
+  updateChartHint(chart, rangeLabel);
 }
 
 function fmtCompact(value) {
@@ -469,48 +542,106 @@ function fmtCompact(value) {
   return n < 100 ? n.toFixed(2) : n.toFixed(0);
 }
 
-function renderPriceChart(chart, rangeLabel = "6 Months") {
-  const wrap = document.getElementById("price-chart");
-  const legend = document.getElementById("price-chart-legend");
-  const hintEl = document.getElementById("chart-hint");
-
-  if (!wrap) return;
-
-  if (!chart?.series?.length) {
-    wrap.innerHTML = "<p class=\"chart-empty\">Chart data not available.</p>";
-    if (legend) legend.innerHTML = "";
-    return;
-  }
-
-  if (hintEl && rangeLabel) {
-    hintEl.textContent = `Close price with SMA 20/50 · ${rangeLabel} · ${chart.interval || "1d"} bars`;
-  }
-
-  const series = chart.series;
-  const levels = chart.levels || {};
-  const W = 800;
-  const H = 260;
-  const pad = { t: 18, r: 16, b: 36, l: 56 };
-  const plotW = W - pad.l - pad.r;
-  const plotH = H - pad.t - pad.b;
-
-  const values = [];
+function computeChartScale(series, levels, useOhlc = false) {
+  const priceValues = [];
   series.forEach((p) => {
-    values.push(p.close);
-    if (p.sma_20 != null) values.push(p.sma_20);
-    if (p.sma_50 != null) values.push(p.sma_50);
+    if (useOhlc) {
+      priceValues.push(p.high, p.low);
+    } else {
+      if (p.close != null) priceValues.push(p.close);
+    }
+    if (p.sma_20 != null) priceValues.push(p.sma_20);
+    if (p.sma_50 != null) priceValues.push(p.sma_50);
   });
-  Object.values(levels).forEach((v) => values.push(v));
 
-  let ymin = Math.min(...values);
-  let ymax = Math.max(...values);
-  const padY = (ymax - ymin) * 0.08 || ymax * 0.02 || 1;
+  const closes = series.map((p) => p.close).filter((v) => v != null);
+  let ymin = Math.min(...priceValues);
+  let ymax = Math.max(...priceValues);
+  const lastClose = closes[closes.length - 1] ?? ymax;
+  const minSpan = Math.max(lastClose * 0.004, 1);
+  if (ymax - ymin < minSpan) {
+    const mid = (ymax + ymin) / 2;
+    ymin = mid - minSpan / 2;
+    ymax = mid + minSpan / 2;
+  }
+  const padY = (ymax - ymin) * 0.12 || lastClose * 0.02 || 1;
   ymin -= padY;
   ymax += padY;
   const ySpan = ymax - ymin || 1;
 
+  return { ymin, ymax, ySpan, lastClose, closes };
+}
+
+function buildChartSvgParts(series, levels, layout, options = {}) {
+  const { showSma = true, showLevels = true, candlesticks = false } = options;
+  const W = layout.W;
+  const H = layout.H;
+  const pad = layout.pad;
+  const plotW = layout.plotW;
+  const plotH = layout.plotH;
+  const ymin = layout.ymin;
+  const ymax = layout.ymax;
+  const ySpan = layout.ySpan;
+
   const xAt = (i) => pad.l + (i / (series.length - 1 || 1)) * plotW;
   const yAt = (v) => pad.t + plotH - ((v - ymin) / ySpan) * plotH;
+
+  const levelLine = (value, color, label) => {
+    if (!showLevels || value == null) return "";
+    let y = yAt(value);
+    let textY = y - 4;
+    let displayLabel = label;
+    if (value > ymax) {
+      y = pad.t + 1;
+      textY = pad.t + 11;
+      displayLabel = `${label} ↑`;
+    } else if (value < ymin) {
+      y = pad.t + plotH - 1;
+      textY = pad.t + plotH - 4;
+      displayLabel = `${label} ↓`;
+    }
+    return `
+      <line x1="${pad.l}" y1="${y}" x2="${W - pad.r}" y2="${y}"
+        stroke="${color}" stroke-width="1" stroke-dasharray="5,4" opacity="0.8" />
+      <text x="${W - pad.r}" y="${textY}" fill="${color}" font-size="10" text-anchor="end">${displayLabel}</text>`;
+  };
+
+  let entryBand = "";
+  if (showLevels && levels.entry_low != null && levels.entry_high != null) {
+    const visibleHigh = Math.min(levels.entry_high, ymax);
+    const visibleLow = Math.max(levels.entry_low, ymin);
+    if (visibleHigh > visibleLow) {
+      const yTop = yAt(visibleHigh);
+      const yBottom = yAt(visibleLow);
+      entryBand = `<rect x="${pad.l}" y="${yTop}" width="${plotW}" height="${yBottom - yTop}" fill="rgba(59,130,246,0.14)" />`;
+    }
+  }
+
+  const gridLines = [0, 0.25, 0.5, 0.75, 1]
+    .map((t) => {
+      const v = ymin + ySpan * (1 - t);
+      const y = pad.t + plotH * t;
+      return `
+        <line x1="${pad.l}" y1="${y}" x2="${W - pad.r}" y2="${y}" stroke="#2d3a4f" stroke-width="1" />
+        <text x="${pad.l - 6}" y="${y + 4}" fill="#8b9cb3" font-size="10" text-anchor="end">${fmtCompact(v)}</text>`;
+    })
+    .join("");
+
+  const xLabelIndexes = [0, Math.floor(series.length / 2), series.length - 1];
+  const formatAxisLabel = (dateStr) => {
+    if (dateStr.includes(" ")) {
+      const [datePart, timePart] = dateStr.split(" ");
+      if (series.length <= 40) return timePart.slice(0, 5);
+      return `${datePart.slice(5)} ${timePart.slice(0, 5)}`;
+    }
+    return dateStr.slice(5);
+  };
+  const xLabels = xLabelIndexes
+    .map(
+      (i) =>
+        `<text x="${xAt(i)}" y="${H - 8}" fill="#8b9cb3" font-size="10" text-anchor="middle">${formatAxisLabel(series[i].date)}</text>`
+    )
+    .join("");
 
   const linePath = (key) => {
     let started = false;
@@ -527,58 +658,95 @@ function renderPriceChart(chart, rangeLabel = "6 Months") {
     return d.trim();
   };
 
-  const levelLine = (value, color, label) => {
-    if (value == null) return "";
-    const y = yAt(value);
-    return `
-      <line x1="${pad.l}" y1="${y}" x2="${W - pad.r}" y2="${y}"
-        stroke="${color}" stroke-width="1" stroke-dasharray="5,4" opacity="0.8" />
-      <text x="${W - pad.r}" y="${y - 4}" fill="${color}" font-size="10" text-anchor="end">${label}</text>`;
-  };
+  const slotW = plotW / Math.max(series.length, 1);
+  const bodyW = Math.max(2, Math.min(10, slotW * 0.65));
+  const candles = candlesticks
+    ? series
+        .map((p, i) => {
+          const cx = xAt(i);
+          const open = p.open ?? p.close;
+          const close = p.close;
+          const high = p.high ?? close;
+          const low = p.low ?? close;
+          const bullish = close >= open;
+          const color = bullish ? "#22c55e" : "#ef4444";
+          const yHigh = yAt(high);
+          const yLow = yAt(low);
+          const yOpen = yAt(open);
+          const yClose = yAt(close);
+          const bodyTop = Math.min(yOpen, yClose);
+          const bodyHeight = Math.max(1, Math.abs(yClose - yOpen));
+          return `
+            <line x1="${cx}" y1="${yHigh}" x2="${cx}" y2="${yLow}" stroke="${color}" stroke-width="1" />
+            <rect x="${(cx - bodyW / 2).toFixed(1)}" y="${bodyTop.toFixed(1)}" width="${bodyW.toFixed(1)}" height="${bodyHeight.toFixed(1)}" fill="${color}" />
+          `;
+        })
+        .join("")
+    : "";
 
-  let entryBand = "";
-  if (levels.entry_low != null && levels.entry_high != null) {
-    const yTop = yAt(levels.entry_high);
-    const yBottom = yAt(levels.entry_low);
-    entryBand = `<rect x="${pad.l}" y="${yTop}" width="${plotW}" height="${yBottom - yTop}" fill="rgba(59,130,246,0.14)" />`;
-  }
+  const smaLayers = showSma
+    ? `
+      <path d="${linePath("sma_50")}" fill="none" stroke="#eab308" stroke-width="1.5" opacity="0.75" />
+      <path d="${linePath("sma_20")}" fill="none" stroke="#60a5fa" stroke-width="1.5" opacity="0.85" />`
+    : "";
 
-  const gridLines = [0, 0.25, 0.5, 0.75, 1]
-    .map((t) => {
-      const v = ymin + ySpan * (1 - t);
-      const y = pad.t + plotH * t;
-      return `
-        <line x1="${pad.l}" y1="${y}" x2="${W - pad.r}" y2="${y}" stroke="#2d3a4f" stroke-width="1" />
-        <text x="${pad.l - 6}" y="${y + 4}" fill="#8b9cb3" font-size="10" text-anchor="end">${fmtCompact(v)}</text>`;
-    })
-    .join("");
-
-  const xLabelIndexes = [0, Math.floor(series.length / 2), series.length - 1];
-  const formatAxisLabel = (dateStr) => {
-    if (dateStr.includes(" ")) return dateStr.split(" ")[1].slice(0, 5);
-    return dateStr.slice(5);
-  };
-  const xLabels = xLabelIndexes
-    .map(
-      (i) =>
-        `<text x="${xAt(i)}" y="${H - 8}" fill="#8b9cb3" font-size="10" text-anchor="middle">${formatAxisLabel(series[i].date)}</text>`
-    )
-    .join("");
+  const closeLine = !candlesticks
+    ? `<path d="${linePath("close")}" fill="none" stroke="#e8edf4" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" />`
+    : "";
 
   const last = series[series.length - 1];
+  const lastMarker =
+    !candlesticks && last
+      ? `<circle cx="${xAt(series.length - 1)}" cy="${yAt(last.close)}" r="3.5" fill="#3b82f6" />`
+      : "";
 
-  wrap.innerHTML = `
-    <svg viewBox="0 0 ${W} ${H}" class="price-chart-svg" role="img" aria-label="Price line chart">
+  return {
+    svgBody: `
       ${gridLines}
       ${entryBand}
       ${levelLine(levels.stop_loss, "#ef4444", "Stop")}
       ${levelLine(levels.target_1, "#22c55e", "T1")}
       ${levelLine(levels.target_2, "#22c55e", "T2")}
-      <path d="${linePath("sma_50")}" fill="none" stroke="#eab308" stroke-width="1.5" opacity="0.75" />
-      <path d="${linePath("sma_20")}" fill="none" stroke="#60a5fa" stroke-width="1.5" opacity="0.85" />
-      <path d="${linePath("close")}" fill="none" stroke="#e8edf4" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" />
+      ${smaLayers}
+      ${candles}
+      ${closeLine}
       ${xLabels}
-      <circle cx="${xAt(series.length - 1)}" cy="${yAt(last.close)}" r="3.5" fill="#3b82f6" />
+      ${lastMarker}`,
+    xAt,
+    yAt,
+  };
+}
+
+function renderLineChart(chart, rangeLabel = "6 Months") {
+  const wrap = document.getElementById("price-chart");
+  const legend = document.getElementById("price-chart-legend");
+
+  if (!wrap) return;
+
+  if (!chart?.series?.length) {
+    wrap.innerHTML = "<p class=\"chart-empty\">Chart data not available.</p>";
+    if (legend) legend.innerHTML = "";
+    return;
+  }
+
+  const series = chart.series;
+  const levels = chart.levels || {};
+  const W = 800;
+  const H = 260;
+  const pad = { t: 18, r: 16, b: 36, l: 56 };
+  const plotW = W - pad.l - pad.r;
+  const plotH = H - pad.t - pad.b;
+  const scale = computeChartScale(series, levels, false);
+  const layout = { W, H, pad, plotW, plotH, ...scale };
+  const { svgBody } = buildChartSvgParts(series, levels, layout, {
+    showSma: true,
+    showLevels: true,
+    candlesticks: false,
+  });
+
+  wrap.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" class="price-chart-svg" role="img" aria-label="Price line chart">
+      ${svgBody}
     </svg>`;
 
   if (legend) {
@@ -590,6 +758,52 @@ function renderPriceChart(chart, rangeLabel = "6 Months") {
       ${levels.stop_loss != null ? "<span class=\"legend-item\"><span class=\"legend-dot stop\"></span>Stop-loss</span>" : ""}
       ${levels.target_1 != null ? "<span class=\"legend-item\"><span class=\"legend-dot target\"></span>Targets</span>" : ""}`;
   }
+}
+
+function renderCandlestickChart(chart, rangeLabel = "6 Months") {
+  const wrap = document.getElementById("price-chart");
+  const legend = document.getElementById("price-chart-legend");
+
+  if (!wrap) return;
+
+  if (!chart?.series?.length) {
+    wrap.innerHTML = "<p class=\"chart-empty\">Chart data not available.</p>";
+    if (legend) legend.innerHTML = "";
+    return;
+  }
+
+  const series = chart.series;
+  const levels = chart.levels || {};
+  const W = 800;
+  const H = 260;
+  const pad = { t: 18, r: 16, b: 36, l: 56 };
+  const plotW = W - pad.l - pad.r;
+  const plotH = H - pad.t - pad.b;
+  const scale = computeChartScale(series, levels, true);
+  const layout = { W, H, pad, plotW, plotH, ...scale };
+  const { svgBody } = buildChartSvgParts(series, levels, layout, {
+    showSma: false,
+    showLevels: true,
+    candlesticks: true,
+  });
+
+  wrap.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" class="price-chart-svg" role="img" aria-label="Candlestick chart">
+      ${svgBody}
+    </svg>`;
+
+  if (legend) {
+    legend.innerHTML = `
+      <span class="legend-item"><span class="legend-dot bullish"></span>Bullish</span>
+      <span class="legend-item"><span class="legend-dot bearish"></span>Bearish</span>
+      ${levels.entry_low != null ? "<span class=\"legend-item\"><span class=\"legend-dot entry\"></span>Entry zone</span>" : ""}
+      ${levels.stop_loss != null ? "<span class=\"legend-item\"><span class=\"legend-dot stop\"></span>Stop-loss</span>" : ""}
+      ${levels.target_1 != null ? "<span class=\"legend-item\"><span class=\"legend-dot target\"></span>Targets</span>" : ""}`;
+  }
+}
+
+function renderPriceChart(chart, rangeLabel = "6 Months") {
+  renderChart(chart, rangeLabel);
 }
 
 let currentBeginnerGuide = null;
