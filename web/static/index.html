@@ -269,6 +269,13 @@
               <button type="button" class="chart-range-tab" data-range="1y">1Y</button>
             </div>
           </div>
+          <div class="chart-controls-row">
+            <div class="chart-type-tabs" role="tablist" aria-label="Chart style">
+              <button type="button" class="chart-type-tab active" data-type="line">Line</button>
+              <button type="button" class="chart-type-tab" data-type="candle">Candles</button>
+            </div>
+            <div class="chart-interval-tabs" id="chart-interval-tabs" role="tablist" aria-label="Bar interval"></div>
+          </div>
           <p class="chart-hint" id="chart-hint">Close price with SMA 20/50 and trade-plan levels.</p>
           <div id="price-chart" class="price-chart" aria-live="polite"></div>
           <div id="price-chart-legend" class="price-chart-legend"></div>

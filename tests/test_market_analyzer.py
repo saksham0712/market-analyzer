@@ -349,11 +349,16 @@ class ChartDataTests(unittest.TestCase):
 
         day = get_chart_range_config("1d")
         self.assertEqual(day.period, "1d")
-        self.assertEqual(day.interval, "5m")
+        self.assertEqual(day.default_interval, "5m")
 
         week = get_chart_range_config("1w")
         self.assertEqual(week.period, "5d")
-        self.assertEqual(week.interval, "15m")
+        self.assertEqual(week.default_interval, "15m")
+
+        from market_analyzer.chart_data import resolve_chart_interval
+
+        self.assertEqual(resolve_chart_interval("1d", "10m"), "10m")
+        self.assertEqual(resolve_chart_interval("6m", "5m"), "1d")
 
         default = get_chart_range_config("invalid")
         self.assertEqual(default.key, "6m")

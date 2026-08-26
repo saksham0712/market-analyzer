@@ -1049,6 +1049,56 @@ body {
   cursor: wait;
 }
 
+.chart-controls-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.chart-type-tabs,
+.chart-interval-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  background: var(--surface-2);
+  padding: 0.25rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.chart-type-tab,
+.chart-interval-tab {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.chart-type-tab:hover,
+.chart-interval-tab:hover {
+  color: var(--text);
+}
+
+.chart-type-tab.active,
+.chart-interval-tab.active {
+  background: var(--surface-3);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.chart-interval-tab.active {
+  background: rgba(59, 130, 246, 0.22);
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.45);
+}
+
 .chart-hint {
   margin: 0 0 0.85rem;
   font-size: 0.8rem;
@@ -1116,6 +1166,8 @@ body {
 .legend-dot.entry { background: rgba(59, 130, 246, 0.45); }
 .legend-dot.stop { background: #ef4444; }
 .legend-dot.target { background: #22c55e; }
+.legend-dot.bullish { background: #22c55e; }
+.legend-dot.bearish { background: #ef4444; }
 
 /* ── Mobile & small tablets ── */
 @media (max-width: 768px) {
@@ -1426,6 +1478,16 @@ body {
   .chart-card-header {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .chart-controls-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .chart-type-tabs,
+  .chart-interval-tabs {
+    justify-content: center;
   }
 
   .chart-range-tabs {

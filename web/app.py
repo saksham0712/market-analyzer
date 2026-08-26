@@ -96,6 +96,7 @@ def create_app() -> FastAPI:
         symbol: str = Query(..., min_length=1),
         market_type: str = Query(...),
         chart_range: str = Query("6m"),
+        interval: str | None = Query(None, description="Bar size: 5m, 10m, 15m, 30m, 1h, 1d"),
         entry_low: float | None = Query(None),
         entry_high: float | None = Query(None),
         stop_loss: float | None = Query(None),
@@ -126,7 +127,12 @@ def create_app() -> FastAPI:
                 target_2=target_2,
                 risk_reward_ratio=None,
             )
-            return fetch_chart_data(symbol_info, chart_range=chart_range, trade_plan=trade_plan)
+            return fetch_chart_data(
+                symbol_info,
+                chart_range=chart_range,
+                trade_plan=trade_plan,
+                interval=interval,
+            )
         except SymbolResolutionError as exc:
             return JSONResponse(
                 status_code=400,
