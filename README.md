@@ -125,6 +125,115 @@ Free key: https://www.alphavantage.co/support/#api-key
 
 When configured, the report shows provider agreement % in Market Insight.
 
+## How data is fetched
+
+End-to-end flow from browser to Yahoo Finance and back. There is **no database** — each request pulls live market data.
+
+```
+Browser (app.js)
+    → FastAPI (web/app.py)
+    → Symbol resolution (symbol_resolver.py)
+    → Data fetch (DataProvider / YahooProvider / optional Alpha Vantage)
+    → Indicators + signals + chart formatting
+    → JSON response to UI
+```
+
+### Data sources
+
+| What | Source | Library / API |
+|------|--------|----------------|
+| Price history (analysis) | Yahoo Finance | `yfinance` `Ticker.history()` |
+| Price history (charts) | Yahoo Finance | Same, with custom period/interval |
+| Symbol metadata | Yahoo Finance | `ticker.info`, `fast_info` |
+| Symbol search (names) | Yahoo Finance | `yfinance.Search()` |
+| Symbol catalog | Local Python | No network |
+| Optional price validation | Alpha Vantage | REST API (`ALPHA_VANTAGE_API_KEY`) |
+
+**Primary path:** `YahooProvider` in `src/market_analyzer/providers/yahoo.py` calls `yf.Ticker(symbol).history(period=..., interval=...)`.
+
+**Analysis** uses `CompositeDataProvider` (Yahoo primary + optional Alpha Vantage quote cross-check). **Charts** call `YahooProvider` directly via `fetch_chart_data()` in `chart_data.py`.
+
+### Example walkthrough: Nifty50 → Analyze → 1W → 15 min → Candles
+
+Concrete path through the code when you analyze Nifty and switch the chart.
+
+#### Phase 1 — Click **Analyze**
+
+1. **Browser** sends `POST /api/analyze` with `{"symbol": "NIFTY50", "market_type": "index"}`.
+2. **FastAPI** (`web/app.py`) validates market type and calls `MarketAnalyzer.analyze()`.
+3. **Symbol resolution** (`symbol_resolver.py`):
+   - Checks local catalog (`symbol_catalog.py`)
+   - `NIFTY50` → **`^NSEI`** (Nifty 50 on Yahoo)
+   - Returns `SymbolInfo` with `yahoo_symbol="^NSEI"`
+4. **First Yahoo fetch** (`analyzer.py` → `YahooProvider`):
+   - `yf.Ticker("^NSEI").history(period="6mo", interval="1d")`
+   - ~120 daily OHLCV bars + fundamentals from `ticker.info`
+5. **In-memory processing** (no more API calls):
+   - `compute_indicators()` — SMA, RSI, MACD, ATR, etc.
+   - `SignalEngine` — buy/sell/hold + confidence
+   - `build_trade_plan()` — entry, stop, targets
+   - `build_chart_data(chart_range="6m")` — initial 6M daily chart in response
+   - `build_beginner_guide()` — English + Hinglish
+6. **Browser** renders results; default chart is **6M line**.
+
+#### Phase 2 — Click **1W** (time range)
+
+1. **Browser** calls `loadChart("1w", ...)` → `GET /api/chart?symbol=NIFTY50&market_type=index&chart_range=1w&interval=15m&...` (trade-plan levels included for chart lines).
+2. **FastAPI** resolves symbol again → `^NSEI`, builds `TradePlan` from query params.
+3. **Chart config** (`chart_data.py`):
+   - Range `1w` → Yahoo `period="5d"`, default interval `15m`
+   - Allowed intervals for 1W: `5m`, `10m`, `15m`, `30m`, `1h`
+4. **Second Yahoo fetch** (separate from analyze):
+   - `history(period="5d", interval="15m")` — ~5 trading days of 15-minute bars
+5. **Response** — `series` with `open`, `high`, `low`, `close`, `sma_20`, `sma_50` per bar.
+6. **Browser** draws **line chart** (close + SMAs).
+
+#### Phase 3 — Click **15 min** (bar size)
+
+Same as Phase 2 if switching interval: new `GET /api/chart` with `interval=15m`. Fresh Yahoo call with `5d` + `15m`.
+
+(`10m` bars are built by fetching `5m` data and resampling in Python — Yahoo has no native 10m interval.)
+
+#### Phase 4 — Click **Candles**
+
+- **No API call** — `app.js` re-renders cached `currentChartData`.
+- `renderCandlestickChart()` draws green/red bodies and wicks from OHLC; Y-axis scales on high/low so intraday movement stays visible.
+
+#### Request summary
+
+| Action | API | Yahoo call | Bar type |
+|--------|-----|------------|----------|
+| Analyze NIFTY50 | `POST /api/analyze` | `^NSEI`, 6mo, **1d** | Daily |
+| Click 1W | `GET /api/chart` | `^NSEI`, 5d, **15m** | 15-minute |
+| Click 15m | `GET /api/chart` | Same | 15-minute |
+| Click Candles | None | — | Re-render only |
+
+```mermaid
+sequenceDiagram
+    participant UI as Browser
+    participant API as FastAPI
+    participant Resolver as symbol_resolver
+    participant Yahoo as yfinance / Yahoo
+
+    UI->>API: POST /api/analyze (NIFTY50, index)
+    API->>Resolver: resolve_user_symbol
+    Resolver-->>API: ^NSEI
+    API->>Yahoo: history(6mo, 1d)
+    Yahoo-->>API: daily OHLCV
+    API-->>UI: signal + trade plan + 6M chart
+
+    UI->>API: GET /api/chart (1w, 15m)
+    API->>Resolver: resolve_user_symbol
+    Resolver-->>API: ^NSEI
+    API->>Yahoo: history(5d, 15m)
+    Yahoo-->>API: intraday OHLCV
+    API-->>UI: chart series JSON
+
+    UI->>UI: Switch to Candles (no API)
+```
+
+**Note:** Analysis and chart views use **independent** Yahoo requests with different `period` / `interval`. Indian symbols use suffixes like `.NS` (NSE) or `^NSEI` for Nifty.
+
 ## Supported market types
 
 | Type | Examples |
