@@ -1,0 +1,464 @@
+/* Paper trade page */
+
+.trade-page .trade-header-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.trade-home-link {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.trade-home-link:hover {
+  color: var(--accent);
+}
+
+.trade-header-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.trade-disclaimer {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0.65rem 1rem;
+  font-size: 0.8rem;
+  color: var(--yellow);
+  background: var(--yellow-bg);
+  border-bottom: 1px solid rgba(234, 179, 8, 0.25);
+  text-align: center;
+}
+
+.trade-main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1rem 1rem 2rem;
+  width: 100%;
+}
+
+.trade-stats {
+  max-width: 1100px;
+  margin: 1rem auto 0;
+  padding: 1rem 1.25rem;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .stat-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.stat-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stat-value {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.stat-value.positive {
+  color: var(--green);
+}
+
+.stat-value.negative {
+  color: var(--red);
+}
+
+.trade-spot-line {
+  margin: 0.85rem 0 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.trade-meta {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.trade-section-head {
+  margin-bottom: 0.65rem;
+}
+
+.trade-section-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.trade-hint {
+  margin: 0.25rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.trade-chain-card,
+.trade-positions-card,
+.trade-history-card {
+  margin-bottom: 1rem;
+}
+
+.expiry-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.expiry-tab {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  padding: 0.35rem 0.65rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.expiry-tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.chain-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.chain-table {
+  width: 100%;
+  min-width: 280px;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.chain-table th,
+.chain-table td {
+  padding: 0.45rem 0.5rem;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.chain-table th {
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  position: sticky;
+  top: 0;
+}
+
+.chain-table tr.atm td {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.chain-table .strike-cell {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.chain-leg-btn {
+  display: block;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: inherit;
+  padding: 0.35rem 0.25rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: inherit;
+  font-weight: 600;
+  text-align: center;
+}
+
+.chain-leg-btn.ce:hover {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.chain-leg-btn.pe:hover {
+  background: var(--red-bg);
+  color: var(--red);
+}
+
+.chain-leg-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.chain-loading,
+.trade-empty {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 1.25rem;
+  font-size: 0.88rem;
+}
+
+.trade-error {
+  color: var(--red);
+  font-size: 0.85rem;
+  margin: 0 0 0.5rem;
+}
+
+.positions-list,
+.closed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.position-card,
+.closed-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem;
+  background: var(--surface-2);
+}
+
+.position-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.position-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.position-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+}
+
+.position-badge.ce {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.position-badge.pe {
+  background: var(--red-bg);
+  color: var(--red);
+}
+
+.position-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.position-grid span {
+  color: var(--text-muted);
+}
+
+.position-actions {
+  margin-top: 0.65rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-sm {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.btn-ghost:hover {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+
+/* Bottom sheets */
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 100;
+}
+
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 101;
+  background: var(--surface);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  padding: 1rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom));
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.sheet-handle {
+  width: 40px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 0 auto 0.75rem;
+}
+
+.sheet h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.1rem;
+}
+
+.sheet-subtitle {
+  margin: 0 0 1rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.sheet-form .field {
+  margin-bottom: 0.75rem;
+}
+
+.sheet-form label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 0.35rem;
+}
+
+.sheet-form input[type="number"] {
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.field-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.order-estimate {
+  margin: 0.5rem 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.sheet-actions {
+  display: flex;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.sheet-actions .btn {
+  flex: 1;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.trade-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.25rem;
+  transform: translateX(-50%);
+  z-index: 200;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  box-shadow: var(--shadow);
+  max-width: min(92vw, 420px);
+  text-align: center;
+}
+
+.trade-toast.success {
+  border-color: rgba(34, 197, 94, 0.45);
+  color: #86efac;
+}
+
+.trade-toast.error {
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #fca5a5;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.expiry-tab .expiry-kind {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+}
+
+.expiry-tab .expiry-date {
+  display: block;
+  font-size: 0.78rem;
+}
+
+@media (min-width: 640px) {
+  .sheet {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: min(420px, 100%);
+    border-radius: 16px;
+    bottom: 10vh;
+  }
+}

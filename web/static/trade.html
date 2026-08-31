@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Paper Trade — Nifty Options | Market Analyzer By Saksham</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <link rel="stylesheet" href="/static/trade.css" />
+</head>
+<body>
+  <div class="page trade-page">
+    <header class="header trade-header">
+      <div class="header-inner trade-header-inner">
+        <div class="brand">
+          <span class="brand-icon">📈</span>
+          <div>
+            <h1><a href="/" class="trade-home-link">Market Analyzer</a> · Paper Trade</h1>
+            <p class="subtitle">Nifty 50 options · practice only</p>
+          </div>
+        </div>
+        <div class="trade-header-actions">
+          <button type="button" id="btn-refresh" class="btn btn-secondary btn-sm">Refresh</button>
+          <button type="button" id="btn-reset" class="btn btn-ghost btn-sm">Reset</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="trade-disclaimer" role="note">
+      <strong>Paper trading only.</strong> Not real money. Not a broker. Buy/Sell fills at live NSE LTP when you confirm. Chain view refreshes manually.
+    </div>
+
+    <div id="trade-toast" class="trade-toast hidden" role="status" aria-live="polite"></div>
+
+    <section class="trade-stats card" id="trade-stats" aria-live="polite">
+      <div class="stat-grid">
+        <div class="stat-item">
+          <span class="stat-label">Cash</span>
+          <span class="stat-value" id="stat-cash">₹1,00,000</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Invested</span>
+          <span class="stat-value" id="stat-invested">₹0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Unrealized P&amp;L</span>
+          <span class="stat-value" id="stat-unrealized">₹0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Realized P&amp;L</span>
+          <span class="stat-value" id="stat-realized">₹0</span>
+        </div>
+      </div>
+      <p class="trade-spot-line">
+        Nifty spot: <strong id="spot-value">—</strong>
+        <span class="trade-meta" id="chain-meta"></span>
+      </p>
+    </section>
+
+    <main class="main trade-main">
+      <section class="card trade-chain-card">
+        <div class="trade-section-head">
+          <h2>Option chain</h2>
+          <p class="trade-hint">Tap CE or PE to buy · 1 lot = 50 qty</p>
+        </div>
+        <div class="expiry-tabs" id="expiry-tabs" role="tablist" aria-label="Expiry dates"></div>
+        <p id="chain-error" class="trade-error hidden" role="alert"></p>
+        <div class="chain-scroll">
+          <table class="chain-table" id="chain-table">
+            <thead>
+              <tr>
+                <th>CE LTP</th>
+                <th>Strike</th>
+                <th>PE LTP</th>
+              </tr>
+            </thead>
+            <tbody id="chain-body">
+              <tr><td colspan="3" class="chain-loading">Loading chain…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card trade-positions-card">
+        <div class="trade-section-head">
+          <h2>Open positions</h2>
+        </div>
+        <div id="positions-list" class="positions-list">
+          <p class="trade-empty">No open positions. Buy from the chain above.</p>
+        </div>
+      </section>
+
+      <section class="card trade-history-card">
+        <div class="trade-section-head">
+          <h2>Closed trades</h2>
+        </div>
+        <div id="closed-list" class="closed-list">
+          <p class="trade-empty">No closed trades yet.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>Educational paper trading only. Not investment advice.</p>
+    </footer>
+  </div>
+
+  <!-- Order sheet -->
+  <div id="sheet-backdrop" class="sheet-backdrop hidden" aria-hidden="true"></div>
+  <div id="order-sheet" class="sheet hidden" role="dialog" aria-modal="true" aria-labelledby="order-sheet-title">
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <h3 id="order-sheet-title">Place order</h3>
+    <p id="order-sheet-subtitle" class="sheet-subtitle"></p>
+    <form id="order-form" class="sheet-form">
+      <input type="hidden" id="order-type" name="type" />
+      <input type="hidden" id="order-strike" name="strike" />
+      <input type="hidden" id="order-expiry" name="expiry" />
+      <input type="hidden" id="order-ltp" name="ltp" />
+      <div class="field">
+        <label for="order-lots">Lots (1 lot = 50)</label>
+        <input id="order-lots" name="lots" type="number" min="1" step="1" value="1" required />
+      </div>
+      <p class="order-estimate">Est. premium: <strong id="order-estimate">₹0</strong></p>
+      <p class="field-hint">Order fills at live NSE LTP when you tap Buy.</p>
+      <div class="sheet-actions">
+        <button type="button" class="btn btn-ghost" id="order-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="order-submit">Buy (market)</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Exit sheet -->
+  <div id="exit-sheet" class="sheet hidden" role="dialog" aria-modal="true" aria-labelledby="exit-sheet-title">
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <h3 id="exit-sheet-title">Exit position</h3>
+    <p id="exit-sheet-subtitle" class="sheet-subtitle"></p>
+    <form id="exit-form" class="sheet-form">
+      <input type="hidden" id="exit-position-id" name="position_id" />
+      <div class="field">
+        <label for="exit-lots">Lots to sell</label>
+        <input id="exit-lots" name="lots" type="number" min="1" step="1" value="1" required />
+        <p class="field-hint" id="exit-lots-hint"></p>
+      </div>
+      <p class="order-estimate">Est. credit: <strong id="exit-estimate">₹0</strong></p>
+      <p class="order-estimate">Est. P&amp;L: <strong id="exit-pnl-estimate">₹0</strong></p>
+      <p class="field-hint">Exit fills at live NSE LTP when you tap Sell.</p>
+      <div class="sheet-actions">
+        <button type="button" class="btn btn-ghost" id="exit-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="exit-submit">Sell (market)</button>
+      </div>
+    </form>
+  </div>
+
+  <script src="/static/trade.js"></script>
+</body>
+</html>
