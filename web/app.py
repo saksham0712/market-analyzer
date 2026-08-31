@@ -67,6 +67,65 @@ def create_app() -> FastAPI:
             )
         return FileResponse(index_path)
 
+    @application.get("/trade")
+    async def trade_page() -> FileResponse:
+        trade_path = STATIC_DIR / "trade.html"
+        if not trade_path.is_file():
+            raise HTTPException(status_code=500, detail="trade.html missing")
+        return FileResponse(trade_path)
+
+    @application.get("/api/trade/chain")
+    async def trade_chain(
+        expiry: str | None = Query(None, description="NSE expiry label e.g. 02-Sep-2026"),
+        refresh: bool = Query(False, description="Bypass server cache and fetch live from NSE"),
+    ) -> dict:
+        from market_analyzer.nse_options import fetch_nifty_option_chain
+
+        try:
+            return fetch_nifty_option_chain(expiry=expiry, use_cache=not refresh)
+        except ValueError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=502,
+                detail=_user_facing_error(
+                    exc,
+                    "Could not load option chain. Tap Refresh to try again.",
+                ),
+            ) from exc
+
+    @application.get("/api/trade/quote")
+    async def trade_quote(
+        expiry: str = Query(..., min_length=1, description="NSE expiry e.g. 01-Sep-2026"),
+        strike: float = Query(..., gt=0),
+        option_type: str = Query(..., alias="type", description="CE or PE"),
+    ) -> dict:
+        from market_analyzer.nse_options import fetch_option_ltp
+
+        try:
+            return fetch_option_ltp(expiry=expiry, strike=strike, option_type=option_type)
+        except ValueError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=502,
+                detail=_user_facing_error(exc, "Could not fetch live option price."),
+            ) from exc
+
+    @application.get("/api/trade/spot")
+    async def trade_spot() -> dict:
+        from market_analyzer.nse_options import fetch_nifty_spot
+
+        try:
+            return fetch_nifty_spot()
+        except ValueError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=502,
+                detail=_user_facing_error(exc, "Could not load Nifty spot price."),
+            ) from exc
+
     @application.get("/static/{asset_path:path}")
     async def static_asset(asset_path: str) -> FileResponse:
         file_path = (STATIC_DIR / asset_path).resolve()

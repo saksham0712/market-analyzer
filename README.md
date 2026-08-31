@@ -45,6 +45,7 @@ python analyze.py NIFTY --market-type index
 - Type **symbol or full name** — autocomplete suggestions appear
 - One screen: signal, action, trade plan, market insight, strategies
 - **Beginner Guide** — collapsible plain-language section (English + **Hinglish** tabs): verdict, checklist, signal explained, risks, next steps, glossary
+- **Paper Trade** (`/trade`) — Nifty 50 options simulator with ₹1,00,000 fake wallet, option chain (NSE), market buy/sell, partial exit, mark-to-market P&amp;L (stored in browser `localStorage`)
 
 ## Deploy free on Vercel
 
